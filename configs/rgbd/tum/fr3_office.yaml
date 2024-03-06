@@ -1,7 +1,7 @@
 inherit_from: "configs/rgbd/tum/base_config.yaml"
 
 Dataset:
-  dataset_path: "datasets/tum/rgbd_dataset_freiburg3_long"
+  dataset_path: "datasets/tum/rgbd_dataset_freiburg3_long_office_household"
   Calibration:
     fx: 535.4
     fy: 539.2
