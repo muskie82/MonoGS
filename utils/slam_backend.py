@@ -390,7 +390,6 @@ class BackEnd(mp.Process):
                 elif data[0] == "unpause":
                     self.pause = False
                 elif data[0] == "color_refinement":
-                    self.pause = False
                     self.color_refinement()
                     self.push_to_frontend()
                 elif data[0] == "init":
