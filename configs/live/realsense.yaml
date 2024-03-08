@@ -1,6 +1,6 @@
 Results:
   save_results: False
-  save_dir: "result"
+  save_dir: "results"
   save_trj: False
   save_trj_kf_intv: 0
   use_gui: True
