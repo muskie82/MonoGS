@@ -496,12 +496,11 @@ class RealsenseDataset(BaseDataset):
         if self.num_frames > 1:
             time_diff = (current_frame_time - self.previous_frame_time)
             self.accumulated_time = self.accumulated_time + time_diff
-            if self.num_frames%1 == 0:
+            if self.num_frames%50 == 0:
                 print("Inst and Avg FPS", 1/time_diff, self.num_frames/self.accumulated_time)
 
         rgb_frame = aligned_frames.get_color_frame()
         image = np.asanyarray(rgb_frame.get_data())
-        #print("RGB image shape: ", image.shape)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.disorted:
             image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
