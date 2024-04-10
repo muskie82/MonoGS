@@ -8,7 +8,7 @@ Results:
   use_wandb: False
 
 Dataset:
-  sensor_type: 'monocular'
+  sensor_type: 'depth'
   pcd_downsample: 32
   pcd_downsample_init: 32
   adaptive_pointsize: True
