@@ -1,6 +1,7 @@
 import csv
 import glob
 import os
+import time
 
 import cv2
 import numpy as np
@@ -478,14 +479,27 @@ class RealsenseDataset(BaseDataset):
         # depth parameters
         self.has_depth = True
         self.num_frames = 0
+        self.accumulated_time = 0.0
+        self.previous_frame_time = time.time()
+        #self.depth_scale = None
 
     def __getitem__(self, idx):
         pose = torch.eye(4, device=self.device, dtype=self.dtype)
 
         frameset = self.pipeline.wait_for_frames()
         aligned_frames = self.align.process(frameset)
+        
+        current_frame_time = time.time()
+        self.num_frames = self.num_frames + 1
+        if self.num_frames > 1:
+            time_diff = (current_frame_time - self.previous_frame_time)
+            self.accumulated_time = self.accumulated_time + time_diff
+            if self.num_frames%1 == 0:
+                print("Inst and Avg FPS", 1/time_diff, self.num_frames/self.accumulated_time)
+
         rgb_frame = aligned_frames.get_color_frame()
         image = np.asanyarray(rgb_frame.get_data())
+        #print("RGB image shape: ", image.shape)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.disorted:
             image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
