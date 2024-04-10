@@ -430,10 +430,13 @@ class RealsenseDataset(BaseDataset):
     def __init__(self, args, path, config):
         super().__init__(args, path, config)
         self.pipeline = rs.pipeline()
-        self.h, self.w = 720, 1280
+        self.h, self.w = 360, 640
         self.config = rs.config()
         self.config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, 30)
+        self.config.enable_stream(rs.stream.depth)
         self.profile = self.pipeline.start(self.config)
+        self.align_to = rs.stream.color
+        self.align = rs.align(self.align_to)
 
         self.rgb_sensor = self.profile.get_device().query_sensors()[1]
         self.rgb_sensor.set_option(rs.option.enable_auto_exposure, False)
@@ -445,6 +448,16 @@ class RealsenseDataset(BaseDataset):
         )
 
         self.rgb_intrinsics = self.rgb_profile.get_intrinsics()
+
+        self.depth_sensor = self.profile.get_device().first_depth_sensor()
+        self.depth_scale  = self.depth_sensor.get_depth_scale()
+        self.depth_profile = rs.video_stream_profile(
+            self.profile.get_stream(rs.stream.depth)
+        )
+        self.depth_intrinsics = self.depth_profile.get_intrinsics()
+        print("Depth Scale is: " , self.depth_scale)
+        print("Depth intrinsics: ", self.depth_intrinsics)
+        print("RGB intrinsics: ", self.rgb_intrinsics)
 
         self.fx = self.rgb_intrinsics.fx
         self.fy = self.rgb_intrinsics.fy
@@ -465,8 +478,8 @@ class RealsenseDataset(BaseDataset):
         )
 
         # depth parameters
-        self.has_depth = False
-        self.depth_scale = None
+        self.has_depth = True
+        self.num_frames = 0
 
     def __getitem__(self, idx):
         pose = torch.eye(4, device=self.device, dtype=self.dtype)
