@@ -1,13 +1,14 @@
 Results:
-  save_results: False
+  save_results: True
   save_dir: "results"
   save_trj: False
   save_trj_kf_intv: 0
   use_gui: True
-  eval_rendering: False
+  eval_rendering: True
   use_wandb: False
 
 Dataset:
+  dataset_path: datasets/realsense/rgbd
   sensor_type: 'depth'
   pcd_downsample: 32
   pcd_downsample_init: 32
