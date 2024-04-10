@@ -483,7 +483,8 @@ class RealsenseDataset(BaseDataset):
         pose = torch.eye(4, device=self.device, dtype=self.dtype)
 
         frameset = self.pipeline.wait_for_frames()
-        rgb_frame = frameset.get_color_frame()
+        aligned_frames = self.align.process(frameset)
+        rgb_frame = aligned_frames.get_color_frame()
         image = np.asanyarray(rgb_frame.get_data())
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.disorted:
@@ -495,7 +496,16 @@ class RealsenseDataset(BaseDataset):
             .permute(2, 0, 1)
             .to(device=self.device, dtype=self.dtype)
         )
-        return image, None, pose
+        depth = None
+        if self.has_depth:
+            aligned_depth_frame = aligned_frames.get_depth_frame()
+            depth = np.array(aligned_depth_frame.get_data())*self.depth_scale
+            depth[depth < 0] = 0
+            np.nan_to_num(depth, nan=1000)
+        
+        
+        self.previous_frame_time = current_frame_time
+        return image, depth, pose
 
 
 def load_dataset(args, path, config):
