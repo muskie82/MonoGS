@@ -17,7 +17,7 @@
   </p>
   <p align="center">(* Equal Contribution)</p>
 
-  <h3 align="center"> CVPR 2024</h3>
+  <h3 align="center"> CVPR 2024 (Highlight)</h3>
 
 
 

@@ -172,7 +172,9 @@ class EuRoCParser:
         for i in range(self.n_img):
             trans = data[pose_indices[i], 1:4]
             quat = data[pose_indices[i], 4:8]
-
+            quat = quat[[1, 2, 3, 0]]
+            
+            
             T_w_i = trimesh.transformations.quaternion_matrix(np.roll(quat, 1))
             T_w_i[:3, 3] = trans
             T_w_c = np.dot(T_w_i, T_i_c0)
