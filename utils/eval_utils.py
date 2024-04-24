@@ -165,7 +165,7 @@ def eval_rendering(
     output["mean_lpips"] = float(np.mean(lpips_array))
 
     Log(
-        f'mean psnr: {output["mean_psnr"]}, ssim: {output["mean_ssim"]}, lpips: {output["mean_ssim"]}',
+        f'mean psnr: {output["mean_psnr"]}, ssim: {output["mean_ssim"]}, lpips: {output["mean_lpips"]}',
         tag="Eval",
     )
 
