@@ -13,7 +13,7 @@ SOFTWARE LICENCE AGREEMENT (EXCLUDING BSD COMPONENTS)
 
 1.This Agreement pertains to a worldwide, non-exclusive, temporary, fully
 paid-up, royalty free, non-transferable, non-sub- licensable licence (the
-“Licence”) to use the elastic fusion source code, including any modification,
+“Licence”) to use the MonoGS source code, including any modification,
 part or derivative (the “Software”).
 
 Ownership and Licence. Your rights to use and download the Software onto your
