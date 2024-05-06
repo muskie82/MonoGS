@@ -458,7 +458,6 @@ class RealsenseDataset(BaseDataset):
             self.profile.get_stream(rs.stream.color)
         )
         self.rgb_intrinsics = self.rgb_profile.get_intrinsics()
-        print("RGB intrinsics: ", self.rgb_intrinsics)
         
         self.fx = self.rgb_intrinsics.fx
         self.fy = self.rgb_intrinsics.fy
@@ -485,8 +484,6 @@ class RealsenseDataset(BaseDataset):
                 self.profile.get_stream(rs.stream.depth)
             )
             self.depth_intrinsics = self.depth_profile.get_intrinsics()
-            print("Depth Scale is: " , self.depth_scale)
-            print("Depth intrinsics: ", self.depth_intrinsics)
         
         
 
