@@ -1,7 +1,6 @@
 import csv
 import glob
 import os
-import time
 
 import cv2
 import numpy as np
@@ -432,12 +431,23 @@ class RealsenseDataset(BaseDataset):
         super().__init__(args, path, config)
         self.pipeline = rs.pipeline()
         self.h, self.w = 360, 640
-        self.config = rs.config()
-        self.config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, 30)
-        self.config.enable_stream(rs.stream.depth)
-        self.profile = self.pipeline.start(self.config)
-        self.align_to = rs.stream.color
-        self.align = rs.align(self.align_to)
+        
+        self.depth_scale = 0
+        if self.config["Dataset"]["sensor_type"] == "depth":
+            self.has_depth = True 
+        else: 
+            self.has_depth = False
+
+        self.rs_config = rs.config()
+        self.rs_config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, 30)
+        if self.has_depth:
+            self.rs_config.enable_stream(rs.stream.depth)
+
+        self.profile = self.pipeline.start(self.rs_config)
+
+        if self.has_depth:
+            self.align_to = rs.stream.color
+            self.align = rs.align(self.align_to)
 
         self.rgb_sensor = self.profile.get_device().query_sensors()[1]
         self.rgb_sensor.set_option(rs.option.enable_auto_exposure, False)
@@ -447,19 +457,9 @@ class RealsenseDataset(BaseDataset):
         self.rgb_profile = rs.video_stream_profile(
             self.profile.get_stream(rs.stream.color)
         )
-
         self.rgb_intrinsics = self.rgb_profile.get_intrinsics()
-
-        self.depth_sensor = self.profile.get_device().first_depth_sensor()
-        self.depth_scale  = self.depth_sensor.get_depth_scale()
-        self.depth_profile = rs.video_stream_profile(
-            self.profile.get_stream(rs.stream.depth)
-        )
-        self.depth_intrinsics = self.depth_profile.get_intrinsics()
-        print("Depth Scale is: " , self.depth_scale)
-        print("Depth intrinsics: ", self.depth_intrinsics)
         print("RGB intrinsics: ", self.rgb_intrinsics)
-
+        
         self.fx = self.rgb_intrinsics.fx
         self.fy = self.rgb_intrinsics.fy
         self.cx = self.rgb_intrinsics.ppx
@@ -478,28 +478,35 @@ class RealsenseDataset(BaseDataset):
             self.K, self.dist_coeffs, np.eye(3), self.K, (self.w, self.h), cv2.CV_32FC1
         )
 
-        # depth parameters
-        self.has_depth = True
-        self.num_frames = 0
-        self.accumulated_time = 0.0
-        self.previous_frame_time = time.time()
-        #self.depth_scale = None
+        if self.has_depth:
+            self.depth_sensor = self.profile.get_device().first_depth_sensor()
+            self.depth_scale  = self.depth_sensor.get_depth_scale()
+            self.depth_profile = rs.video_stream_profile(
+                self.profile.get_stream(rs.stream.depth)
+            )
+            self.depth_intrinsics = self.depth_profile.get_intrinsics()
+            print("Depth Scale is: " , self.depth_scale)
+            print("Depth intrinsics: ", self.depth_intrinsics)
+        
+        
+
 
     def __getitem__(self, idx):
         pose = torch.eye(4, device=self.device, dtype=self.dtype)
+        depth = None
 
         frameset = self.pipeline.wait_for_frames()
-        aligned_frames = self.align.process(frameset)
-        
-        current_frame_time = time.time()
-        self.num_frames = self.num_frames + 1
-        if self.num_frames > 1:
-            time_diff = (current_frame_time - self.previous_frame_time)
-            self.accumulated_time = self.accumulated_time + time_diff
-            if self.num_frames%50 == 0:
-                print("Inst and Avg FPS", 1/time_diff, self.num_frames/self.accumulated_time)
 
-        rgb_frame = aligned_frames.get_color_frame()
+        if self.has_depth:
+            aligned_frames = self.align.process(frameset)
+            rgb_frame = aligned_frames.get_color_frame()
+            aligned_depth_frame = aligned_frames.get_depth_frame()
+            depth = np.array(aligned_depth_frame.get_data())*self.depth_scale
+            depth[depth < 0] = 0
+            np.nan_to_num(depth, nan=1000)
+        else:
+            rgb_frame = frameset.get_color_frame()
+
         image = np.asanyarray(rgb_frame.get_data())
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.disorted:
@@ -511,15 +518,7 @@ class RealsenseDataset(BaseDataset):
             .permute(2, 0, 1)
             .to(device=self.device, dtype=self.dtype)
         )
-        depth = None
-        if self.has_depth:
-            aligned_depth_frame = aligned_frames.get_depth_frame()
-            depth = np.array(aligned_depth_frame.get_data())*self.depth_scale
-            depth[depth < 0] = 0
-            np.nan_to_num(depth, nan=1000)
-        
-        
-        self.previous_frame_time = current_frame_time
+
         return image, depth, pose
 
 

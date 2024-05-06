@@ -8,6 +8,7 @@ Results:
   use_wandb: False
 
 Dataset:
+  dataset_path: datasets/realsense/rgbd
   sensor_type: 'monocular'
   pcd_downsample: 32
   pcd_downsample_init: 32
