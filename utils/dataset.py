@@ -430,7 +430,7 @@ class RealsenseDataset(BaseDataset):
     def __init__(self, args, path, config):
         super().__init__(args, path, config)
         self.pipeline = rs.pipeline()
-        self.h, self.w = 360, 640
+        self.h, self.w = 720, 1280
         
         self.depth_scale = 0
         if self.config["Dataset"]["sensor_type"] == "depth":
