@@ -357,7 +357,8 @@ class BackEnd(mp.Process):
         keyframes = []
         for kf_idx in self.current_window:
             kf = self.viewpoints[kf_idx]
-            keyframes.append((kf_idx, kf.R.clone(), kf.T.clone()))
+            keyframes.append((kf_idx, kf.T.clone()))
+
         if tag is None:
             tag = "sync_backend"
 
@@ -379,7 +380,8 @@ class BackEnd(mp.Process):
                     continue
                 self.map(self.current_window)
                 if self.last_sent >= 10:
-                    self.map(self.current_window, prune=True, iters=10)
+                    self.map(self.current_window, 
+                             prune=True, iters=10)
                     self.push_to_frontend()
             else:
                 data = self.backend_queue.get()

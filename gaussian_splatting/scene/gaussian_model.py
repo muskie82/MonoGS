@@ -26,7 +26,7 @@ from gaussian_splatting.utils.general_utils import (
     inverse_sigmoid,
     strip_symmetric,
 )
-from gaussian_splatting.utils.graphics_utils import BasicPointCloud, getWorld2View2
+from gaussian_splatting.utils.graphics_utils import BasicPointCloud
 from gaussian_splatting.utils.sh_utils import RGB2SH
 from gaussian_splatting.utils.system_utils import mkdir_p
 
@@ -147,7 +147,8 @@ class GaussianModel:
             convert_rgb_to_intensity=False,
         )
 
-        W2C = getWorld2View2(cam.R, cam.T).cpu().numpy()
+        W2C = cam.T.cpu().numpy()
+
         pcd_tmp = o3d.geometry.PointCloud.create_from_rgbd_image(
             rgbd,
             o3d.camera.PinholeCameraIntrinsic(

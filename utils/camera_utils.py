@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 
-from gaussian_splatting.utils.graphics_utils import getProjectionMatrix2, getWorld2View2
+from gaussian_splatting.utils.graphics_utils import getProjectionMatrix2
 from utils.slam_utils import image_gradient, image_gradient_mask
-
+import torch.nn.functional as F
 
 class Camera(nn.Module):
     def __init__(
@@ -27,12 +27,9 @@ class Camera(nn.Module):
         self.uid = uid
         self.device = device
 
-        T = torch.eye(4, device=device)
-        self.R = T[:3, :3]
-        self.T = T[:3, 3]
-        self.R_gt = gt_T[:3, :3]
-        self.T_gt = gt_T[:3, 3]
-
+        self.T = torch.eye(4, device=device).to(torch.float32)
+        self.T_gt = gt_T.to(device=device).to(torch.float32).clone()
+        
         self.original_image = color
         self.depth = depth
         self.grad_mask = None
@@ -61,6 +58,11 @@ class Camera(nn.Module):
         )
 
         self.projection_matrix = projection_matrix.to(device=device)
+        
+        
+
+
+
 
     @staticmethod
     def init_from_dataset(dataset, idx, projection_matrix):
@@ -93,7 +95,7 @@ class Camera(nn.Module):
 
     @property
     def world_view_transform(self):
-        return getWorld2View2(self.R, self.T).transpose(0, 1)
+        return self.T.transpose(0, 1).to(device=self.device)
 
     @property
     def full_proj_transform(self):
@@ -105,12 +107,8 @@ class Camera(nn.Module):
 
     @property
     def camera_center(self):
-        return self.world_view_transform.inverse()[3, :3]
-
-    def update_RT(self, R, t):
-        self.R = R.to(device=self.device)
-        self.T = t.to(device=self.device)
-
+        return self.world_view_transform #TODO: Need to invert for high order SHs by inverse_t(self.world_view_transform).
+        
     def compute_grad_mask(self, config):
         edge_threshold = config["Training"]["edge_threshold"]
 
@@ -120,28 +118,39 @@ class Camera(nn.Module):
         gray_grad_v = gray_grad_v * mask_v
         gray_grad_h = gray_grad_h * mask_h
         img_grad_intensity = torch.sqrt(gray_grad_v**2 + gray_grad_h**2)
-
+        
         if config["Dataset"]["type"] == "replica":
-            row, col = 32, 32
+            size = 32
             multiplier = edge_threshold
             _, h, w = self.original_image.shape
-            for r in range(row):
-                for c in range(col):
-                    block = img_grad_intensity[
-                        :,
-                        r * int(h / row) : (r + 1) * int(h / row),
-                        c * int(w / col) : (c + 1) * int(w / col),
-                    ]
-                    th_median = block.median()
-                    block[block > (th_median * multiplier)] = 1
-                    block[block <= (th_median * multiplier)] = 0
-            self.grad_mask = img_grad_intensity
+            I = img_grad_intensity.unsqueeze(0)
+            I_unf = F.unfold(I, size, stride=size)
+            median_patch, _ = torch.median(I_unf, dim=1,keepdim=True)
+            mask = (I_unf > (median_patch * multiplier)).float()
+            I_f = F.fold(mask, I.shape[-2:],size,stride=size).squeeze(0)
+            self.grad_mask = I_f
         else:
             median_img_grad_intensity = img_grad_intensity.median()
             self.grad_mask = (
                 img_grad_intensity > median_img_grad_intensity * edge_threshold
             )
 
+        gt_image = self.original_image.cuda()
+        _, h, w = self.original_image.cuda().shape
+        mask_shape = (1, h, w)
+        rgb_boundary_threshold = config["Training"]["rgb_boundary_threshold"]
+        rgb_pixel_mask = (gt_image.sum(dim=0) > rgb_boundary_threshold).view(*mask_shape)
+        self.rgb_pixel_mask = rgb_pixel_mask * self.grad_mask
+        self.rgb_pixel_mask_mapping = rgb_pixel_mask
+        
+        if self.depth is not None:
+            self.gt_depth = torch.from_numpy(self.depth).to(
+            dtype=torch.float32, device=self.device
+        )[None]
+
+
+        
+    
     def clean(self):
         self.original_image = None
         self.depth = None
@@ -152,3 +161,13 @@ class Camera(nn.Module):
 
         self.exposure_a = None
         self.exposure_b = None
+        
+        self.rgb_pixel_mask = None
+        self.rgb_pixel_mask_mapping = None
+        self.gt_depth = None
+
+class CameraMsg():
+    def __init__(self, Camera):
+        self.uid = Camera.uid
+        self.T = Camera.T
+        self.T_gt = Camera.T_gt

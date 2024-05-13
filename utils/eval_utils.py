@@ -71,16 +71,11 @@ def eval_ate(frames, kf_ids, save_dir, iterations, final=False, monocular=False)
     trj_id, trj_est, trj_gt = [], [], []
     trj_est_np, trj_gt_np = [], []
 
-    def gen_pose_matrix(R, T):
-        pose = np.eye(4)
-        pose[0:3, 0:3] = R.cpu().numpy()
-        pose[0:3, 3] = T.cpu().numpy()
-        return pose
 
     for kf_id in kf_ids:
         kf = frames[kf_id]
-        pose_est = np.linalg.inv(gen_pose_matrix(kf.R, kf.T))
-        pose_gt = np.linalg.inv(gen_pose_matrix(kf.R_gt, kf.T_gt))
+        pose_est = np.linalg.inv(kf.T.cpu().numpy())
+        pose_gt = np.linalg.inv(kf.T_gt.cpu().numpy())
 
         trj_id.append(frames[kf_id].uid)
         trj_est.append(pose_est.tolist())

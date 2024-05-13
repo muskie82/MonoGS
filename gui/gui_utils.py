@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import open3d as o3d
 import torch
-
+import copy
 from gaussian_splatting.utils.general_utils import (
     build_scaling_rotation,
     strip_symmetric,
@@ -108,7 +108,7 @@ class GaussianPacket:
         self.gtcolor = self.resize_img(gtcolor, 320)
         self.gtdepth = self.resize_img(gtdepth, 320)
         self.gtnormal = self.resize_img(gtnormal, 320)
-        self.keyframes = keyframes
+        self.keyframes = copy.deepcopy(keyframes)
         self.finish = finish
         self.kf_window = kf_window
 
